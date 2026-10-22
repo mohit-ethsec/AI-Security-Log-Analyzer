@@ -1,3 +1,4 @@
+import json 
 from collections import defaultdict
 
 failed_attempts = defaultdict(int)
@@ -19,6 +20,8 @@ for line in logs:
 
 print("\n=== Suspicious IP Analysis ===\n")
 
+report_data = []
+
 for ip, count in failed_attempts.items():
     if count <= 2:
         risk = "LOW"
@@ -31,3 +34,13 @@ for ip, count in failed_attempts.items():
     print(f"Failed Attempts: {count}")
     print(f"Risk Level: {risk}")
     print("-" * 25)
+
+report_data.append({
+	"ip": ip, 
+	"failed_attempts":
+count,
+	"risk":risk
+})
+with open("reports/security_report.json", "w") as report:
+	json.dump(report_data, report, indent=4)
+print("\nJSON report created successfully!")
