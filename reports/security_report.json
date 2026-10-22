@@ -1,7 +1,82 @@
 [
     {
-        "ip": "192.168.1.140",
+        "ip": "192.168.1.11",
         "failed_attempts": 3,
         "risk": "MEDIUM"
+    },
+    {
+        "ip": "192.168.1.12",
+        "failed_attempts": 2,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.13",
+        "failed_attempts": 1,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.14",
+        "failed_attempts": 6,
+        "risk": "HIGH"
+    },
+    {
+        "ip": "192.168.1.16",
+        "failed_attempts": 3,
+        "risk": "MEDIUM"
+    },
+    {
+        "ip": "192.168.1.17",
+        "failed_attempts": 1,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.18",
+        "failed_attempts": 4,
+        "risk": "MEDIUM"
+    },
+    {
+        "ip": "192.168.1.19",
+        "failed_attempts": 7,
+        "risk": "HIGH"
+    },
+    {
+        "ip": "192.168.1.21",
+        "failed_attempts": 1,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.22",
+        "failed_attempts": 2,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.23",
+        "failed_attempts": 3,
+        "risk": "MEDIUM"
+    },
+    {
+        "ip": "192.168.1.24",
+        "failed_attempts": 6,
+        "risk": "HIGH"
+    },
+    {
+        "ip": "192.168.1.26",
+        "failed_attempts": 1,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.27",
+        "failed_attempts": 2,
+        "risk": "LOW"
+    },
+    {
+        "ip": "192.168.1.28",
+        "failed_attempts": 4,
+        "risk": "MEDIUM"
+    },
+    {
+        "ip": "192.168.1.29",
+        "failed_attempts": 7,
+        "risk": "HIGH"
     }
 ]

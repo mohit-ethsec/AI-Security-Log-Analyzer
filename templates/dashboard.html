@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Security Log Analyzer | SOC Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --argon-bg: #070b19;
+            --argon-card-bg: rgba(17, 25, 48, 0.85);
+            --argon-sidebar-bg: rgba(12, 18, 36, 0.95);
+            --neon-green: #00ff41;
+            --neon-green-dim: rgba(0, 255, 65, 0.15);
+            --neon-green-glow: 0 0 15px rgba(0, 255, 65, 0.35);
+            --cyber-cyan: #00f0ff;
+            --risk-high: #ff3b5c;
+            --risk-med: #ff9f1c;
+            --risk-low: #00ff41;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(0, 255, 65, 0.2);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--argon-bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 65, 0.04), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 240, 255, 0.04), transparent 25%),
+                linear-gradient(rgba(0, 255, 65, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cyber-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* Argon Style Top Header Background */
+        .argon-header-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #061326 0%, #0a2229 50%, #050b14 100%);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 30px rgba(0, 255, 65, 0.08);
+            z-index: 0;
+        }
+
+        .argon-header-bg::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-green), var(--cyber-cyan), transparent);
+        }
+
+        /* Sidebar Navigation */
+        .sidenav {
+            width: 260px;
+            position: fixed;
+            top: 1rem;
+            bottom: 1rem;
+            left: 1rem;
+            z-index: 1030;
+            background: var(--argon-sidebar-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-left: 3px solid var(--neon-green);
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .sidenav-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .brand-logo {
+            color: var(--neon-green);
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+        }
+
+        .nav-link-argon {
+            display: flex;
+            align-items: center;
+            padding: 0.85rem 1.25rem;
+            margin: 0.35rem 0.85rem;
+            color: var(--text-secondary);
+            border-radius: 0.65rem;
+            font-weight: 500;
+            font-size: 0.92rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .nav-link-argon i {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            margin-right: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--neon-green);
+            transition: all 0.25s ease;
+        }
+
+        .nav-link-argon:hover, .nav-link-argon.active {
+            background: var(--neon-green-dim);
+            color: var(--text-primary);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        }
+
+        .nav-link-argon.active i {
+            background: var(--neon-green);
+            color: #050b14;
+            box-shadow: var(--neon-green-glow);
+        }
+
+        /* Main Content Wrapper */
+        .main-content {
+            margin-left: 288px;
+            position: relative;
+            z-index: 1;
+            padding: 1.5rem 2rem 3rem;
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidenav {
+                transform: translateX(-115%);
+            }
+            .sidenav.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+
+        /* Argon Cards */
+        .argon-card {
+            background: var(--argon-card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            box-shadow: 0 8px 26px -4px rgba(0, 0, 0, 0.45);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .argon-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 65, 0.4);
+            box-shadow: 0 12px 32px -4px rgba(0, 255, 65, 0.15);
+        }
+
+        /* Animated Statistic Cards */
+        @keyframes cardEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(25px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card-anim {
+            animation: cardEntrance 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        .stat-delay-1 { animation-delay: 0.1s; }
+        .stat-delay-2 { animation-delay: 0.2s; }
+        .stat-delay-3 { animation-delay: 0.3s; }
+        .stat-delay-4 { animation-delay: 0.4s; }
+
+        .icon-shape {
+            width: 52px;
+            height: 52px;
+            border-radius: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+
+        .icon-neon-green {
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.2), rgba(0, 255, 65, 0.05));
+            color: var(--neon-green);
+            border: 1px solid rgba(0, 255, 65, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        .icon-neon-red {
+            background: linear-gradient(135deg, rgba(255, 59, 92, 0.2), rgba(255, 59, 92, 0.05));
+            color: var(--risk-high);
+            border: 1px solid rgba(255, 59, 92, 0.4);
+            box-shadow: 0 0 15px rgba(255, 59, 92, 0.2);
+        }
+
+        .icon-neon-orange {
+            background: linear-gradient(135deg, rgba(255, 159, 28, 0.2), rgba(255, 159, 28, 0.05));
+            color: var(--risk-med);
+            border: 1px solid rgba(255, 159, 28, 0.4);
+            box-shadow: 0 0 15px rgba(255, 159, 28, 0.2);
+        }
+
+        .icon-neon-cyan {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 240, 255, 0.05));
+            color: var(--cyber-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.35rem;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        /* Live Pulse Dot */
+        .pulse-dot {
+            width: 9px;
+            height: 9px;
+            background-color: var(--neon-green);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 rgba(0, 255, 65, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(0, 255, 65, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+        }
+
+        /* Cyberpunk Buttons & Inputs */
+        .btn-cyber {
+            background: rgba(0, 255, 65, 0.12);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.55rem 1.15rem;
+            border-radius: 0.6rem;
+            transition: all 0.25s ease;
+        }
+
+        .btn-cyber:hover {
+            background: var(--neon-green);
+            color: #050b14;
+            box-shadow: var(--neon-green-glow);
+        }
+
+        .search-cyber {
+            background: rgba(7, 11, 25, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            border-radius: 0.6rem;
+            padding: 0.55rem 1rem 0.55rem 2.5rem;
+        }
+
+        .search-cyber:focus {
+            background: rgba(7, 11, 25, 0.95);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.15);
+            color: #fff;
+            outline: none;
+        }
+
+        .search-cyber::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* Table Design */
+        .table-argon {
+            color: var(--text-primary);
+            vertical-align: middle;
+            margin-bottom: 0;
+        }
+
+        .table-argon thead th {
+            background: rgba(7, 11, 25, 0.6);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .table-argon tbody td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: transparent;
+            color: var(--text-primary);
+        }
+
+        .table-argon tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table-argon tbody tr:hover {
+            background-color: rgba(0, 255, 65, 0.05);
+        }
+
+        /* Risk Level Badges */
+        .badge-risk {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.45em 0.9em;
+            border-radius: 0.45rem;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-high {
+            background: rgba(255, 59, 92, 0.15);
+            color: var(--risk-high);
+            border: 1px solid rgba(255, 59, 92, 0.5);
+            box-shadow: 0 0 10px rgba(255, 59, 92, 0.2);
+        }
+
+        .badge-medium {
+            background: rgba(255, 159, 28, 0.15);
+            color: var(--risk-med);
+            border: 1px solid rgba(255, 159, 28, 0.5);
+            box-shadow: 0 0 10px rgba(255, 159, 28, 0.2);
+        }
+
+        .badge-low {
+            background: rgba(0, 255, 65, 0.15);
+            color: var(--risk-low);
+            border: 1px solid rgba(0, 255, 65, 0.5);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .chart-box {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Argon Header Backdrop -->
+    <div class="argon-header-bg"></div>
+
+    <!-- Argon Sidebar -->
+    <aside class="sidenav d-flex flex-column justify-content-between" id="sidenav-main">
+        <div>
+            <div class="sidenav-header">
+                <a class="brand-logo cyber-font" href="#">
+                    <i class="fa-solid fa-shield-halved fa-lg"></i>
+                    <span>AI SOC ANALYZER</span>
+                </a>
+            </div>
+            <div class="mt-2">
+                <a class="nav-link-argon active" href="#overview">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>SOC Overview</span>
+                </a>
+                <a class="nav-link-argon" href="#analytics">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Threat Analytics</span>
+                </a>
+                <a class="nav-link-argon" href="#logs-table">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>IP Threat Logs</span>
+                </a>
+                <a class="nav-link-argon" href="javascript:void(0)" onclick="downloadJSONReport()">
+                    <i class="fa-solid fa-file-code"></i>
+                    <span>Export JSON Report</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="p-3 m-3 rounded-3" style="background: rgba(0, 255, 65, 0.06); border: 1px solid rgba(0, 255, 65, 0.2);">
+            <div class="d-flex align-items-center mb-1">
+                <span class="pulse-dot me-2"></span>
+                <span class="mono-font small fw-bold" style="color: var(--neon-green);">AI ENGINE ACTIVE</span>
+            </div>
+            <div class="text-secondary" style="font-size: 0.75rem;">
+                Real-time anomaly detection &amp; log inspection running.
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="overview">
+        <!-- Top Navbar -->
+        <nav class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-cyber d-lg-none me-3" onclick="document.getElementById('sidenav-main').classList.toggle('show')">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 small mono-font">
+                            <li class="breadcrumb-item"><a href="#" class="text-secondary text-decoration-none">SOC</a></li>
+                            <li class="breadcrumb-item active text-white" aria-current="page">Dashboard</li>
+                        </ol>
+                    </nav>
+                    <h4 class="fw-bold mb-0 mt-1 d-flex align-items-center gap-2">
+                        AI Security Log Analyzer
+                        <span class="badge rounded-pill mono-font" style="background: var(--neon-green-dim); color: var(--neon-green); font-size: 0.7rem; border: 1px solid var(--neon-green);">v2.4 LIVE</span>
+                    </h4>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 mt-3 mt-sm-0">
+                <button class="btn btn-cyber" onclick="downloadJSONReport()">
+                    <i class="fa-solid fa-download me-2"></i>Download JSON Report
+                </button>
+            </div>
+        </nav>
+
+        <!-- Statistics Cards Row -->
+        <div class="row g-4 mb-4">
+            <!-- Total Suspicious IPs -->
+            <div class="col-xl-3 col-sm-6">
+                <div class="argon-card p-3 stat-card-anim stat-delay-1">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">Total Suspicious IPs</div>
+                            <div class="stat-value" data-target="{{ total_ips }}">{{ total_ips }}</div>
+                        </div>
+                        <div class="icon-shape icon-neon-cyan">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between small">
+                        <span class="text-secondary">Monitored Endpoints</span>
+                        <span class="mono-font" style="color: var(--cyber-cyan);"><i class="fa-solid fa-satellite-dish me-1"></i>ACTIVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- High Risk IPs -->
+            <div class="col-xl-3 col-sm-6">
+                <div class="argon-card p-4 stat-card-anim stat-delay-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">High Risk IPs</div>
+                            <div class="stat-value" style="color: var(--risk-high);" data-target="{{ high_risk }}">{{ high_risk }}</div>
+                        </div>
+                        <div class="icon-shape icon-neon-red">
+                            <i class="fa-solid fa-skull-crossbones"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between small">
+                        <span class="text-secondary">Critical Threat Level</span>
+                        <span class="mono-font" style="color: var(--risk-high);"><i class="fa-solid fa-triangle-exclamation me-1"></i>ALERT</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medium Risk IPs -->
+            <div class="col-xl-3 col-sm-6">
+                <div class="argon-card p-4 stat-card-anim stat-delay-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">Medium Risk IPs</div>
+                            <div class="stat-value" style="color: var(--risk-med);" data-target="{{ medium_risk }}">{{ medium_risk }}</div>
+                        </div>
+                        <div class="icon-shape icon-neon-orange">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between small">
+                        <span class="text-secondary">Elevated Anomalies</span>
+                        <span class="mono-font" style="color: var(--risk-med);"><i class="fa-solid fa-eye me-1"></i>WATCH</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Risk IPs -->
+            <div class="col-xl-3 col-sm-6">
+                <div class="argon-card p-4 stat-card-anim stat-delay-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">Low Risk IPs</div>
+                            <div class="stat-value" style="color: var(--risk-low);" data-target="{{ low_risk }}">{{ low_risk }}</div>
+                        </div>
+                        <div class="icon-shape icon-neon-green">
+                            <i class="fa-solid fa-shield-check"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between small">
+                        <span class="text-secondary">Baseline Activity</span>
+                        <span class="mono-font" style="color: var(--risk-low);"><i class="fa-solid fa-check me-1"></i>SAFE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-4" id="analytics">
+            <!-- Bar Chart: Failed Login Attempts -->
+            <div class="col-lg-8">
+                <div class="argon-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-uppercase small mono-font" style="color: var(--neon-green);">Telemetry Metrics</span>
+                            <h5 class="fw-bold mb-0">Failed Login Attempts by IP</h5>
+                        </div>
+                        <span class="badge bg-dark border border-secondary mono-font">BAR_GRAPH</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="failedAttemptsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pie Chart: Risk Distribution -->
+            <div class="col-lg-4">
+                <div class="argon-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="text-uppercase small mono-font" style="color: var(--neon-green);">Classification</span>
+                            <h5 class="fw-bold mb-0">Risk Distribution</h5>
+                        </div>
+                        <span class="badge bg-dark border border-secondary mono-font">PIE_CHART</span>
+                    </div>
+                    <div class="chart-box d-flex align-items-center justify-content-center">
+                        <canvas id="riskPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Threat Intelligence Table -->
+        <div class="row" id="logs-table">
+            <div class="col-12">
+                <div class="argon-card">
+                    <!-- Table Header & Filters -->
+                    <div class="p-4 border-bottom border-secondary border-opacity-25 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <span class="text-uppercase small mono-font" style="color: var(--neon-green);">Real-Time Feed</span>
+                            <h5 class="fw-bold mb-0">Suspicious IP Log Analysis</h5>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <!-- Search Input -->
+                            <div class="position-relative">
+                                <i class="fa-solid fa-magnifying-glass position-absolute text-secondary" style="left: 14px; top: 50%; transform: translateY(-50%); font-size: 0.85rem;"></i>
+                                <input type="text" id="ipSearchInput" class="search-cyber" placeholder="Search IP or risk..." onkeyup="filterLogsTable()">
+                            </div>
+
+                            <!-- Risk Filter Dropdown -->
+                            <select id="riskFilterSelect" class="search-cyber ps-3" onchange="filterLogsTable()">
+                                <option value="ALL">All Risk Levels</option>
+                                <option value="HIGH">HIGH Risk</option>
+                                <option value="MEDIUM">MEDIUM Risk</option>
+                                <option value="LOW">LOW Risk</option>
+                            </select>
+
+                            <!-- Export Button -->
+                            <button class="btn btn-cyber" onclick="downloadJSONReport()">
+                                <i class="fa-solid fa-file-export me-1"></i>JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table Body -->
+                    <div class="table-responsive">
+                        <table class="table table-argon" id="cyberLogTable">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Failed Attempts</th>
+                                    <th>Risk Level</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data %}
+                                {% set risk_val = item.risk if item.risk is defined else item.risk_level %}
+                                <tr class="log-row" data-ip="{{ item.ip }}" data-attempts="{{ item.failed_attempts }}" data-risk="{{ risk_val }}">
+                                    <td class="mono-font fw-semibold">
+                                        <i class="fa-solid fa-server me-2 text-secondary"></i>{{ item.ip }}
+                                    </td>
+                                    <td class="mono-font">
+                                        <span class="fw-bold">{{ item.failed_attempts }}</span>
+                                        <span class="text-secondary small ms-1">attempts</span>
+                                    </td>
+                                    <td>
+                                        {% if risk_val == 'HIGH' %}
+                                            <span class="badge-risk badge-high">
+                                                <i class="fa-solid fa-circle-radiation"></i> HIGH
+                                            </span>
+                                        {% elif risk_val == 'MEDIUM' %}
+                                            <span class="badge-risk badge-medium">
+                                                <i class="fa-solid fa-triangle-exclamation"></i> MEDIUM
+                                            </span>
+                                        {% elif risk_val == 'LOW' %}
+                                            <span class="badge-risk badge-low">
+                                                <i class="fa-solid fa-shield-halved"></i> LOW
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary mono-font">{{ risk_val }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-cyber py-1 px-3" onclick="inspectRecord('{{ item.ip }}', '{{ item.failed_attempts }}', '{{ risk_val }}')">
+                                            <i class="fa-solid fa-crosshairs me-1"></i>Inspect
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty Search Notice -->
+                    <div id="noMatchAlert" class="text-center py-5 d-none">
+                        <i class="fa-solid fa-Select fa-radar fa-2x mb-2" style="color: var(--neon-green);"></i>
+                        <p class="mono-font text-secondary mb-0">No matching IP records found in current telemetry stream.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Inspect IP Modal -->
+    <div class="modal fade" id="inspectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content argon-card border-secondary" style="background: #0b1224;">
+                <div class="modal-header border-bottom border-secondary border-opacity-25">
+                    <h5 class="modal-title cyber-font" style="color: var(--neon-green);">
+                        <i class="fa-solid fa-terminal me-2"></i>THREAT_INSPECTION_TERMINAL
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body mono-font small">
+                    <div class="p-3 rounded mb-3" style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 255, 65, 0.2);">
+                        <div class="text-secondary mb-1">// TARGET TELEMETRY</div>
+                        <div><strong>IP_ADDRESS:</strong> <span id="modalIp" class="text-white"></span></div>
+                        <div><strong>FAILED_LOGINS:</strong> <span id="modalAttempts" class="text-white"></span></div>
+                        <div><strong>RISK_CLASSIFICATION:</strong> <span id="modalRisk" class="fw-bold"></span></div>
+                    </div>
+                    <div class="text-secondary">
+                        AI Recommendation: Monitor authentication logs closely or apply automated firewall drop rules for persistent high-frequency offenders.
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary mono-font" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-sm btn-cyber" data-bs-dismiss="modal">Acknowledge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script>
+        // Collect telemetry directly from rendered DOM rows (100% Jinja2 safe)
+        function getTableData() {
+            const rows = document.querySelectorAll('#cyberLogTable tbody tr.log-row');
+            const records = [];
+            rows.forEach(row => {
+                records.push({
+                    ip: row.getAttribute('data-ip'),
+                    failed_attempts: parseInt(row.getAttribute('data-attempts'), 10) || 0,
+                    risk: row.getAttribute('data-risk')
+                });
+            });
+            return records;
+        }
+
+        // Initialize Charts on DOM Load
+        document.addEventListener('DOMContentLoaded', function () {
+            const logData = getTableData();
+
+            const highCount = Number('{{ high_risk }}') || 0;
+            const medCount = Number('{{ medium_risk }}') || 0;
+            const lowCount = Number('{{ low_risk }}') || 0;
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+            // 1. Chart.js Pie Chart for Risk Distribution
+            const pieCtx = document.getElementById('riskPieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['HIGH', 'MEDIUM', 'LOW'],
+                    datasets: [{
+                        data: [highCount, medCount, lowCount],
+                        backgroundColor: [
+                            'rgba(255, 59, 92, 0.85)',
+                            'rgba(255, 159, 28, 0.85)',
+                            'rgba(0, 255, 65, 0.85)'
+                        ],
+                        borderColor: [
+                            '#ff3b5c',
+                            '#ff9f1c',
+                            '#00ff41'
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 18,
+                                usePointStyle: true,
+                                pointStyle: 'rectRounded'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Chart.js Bar Chart for Failed Login Attempts
+            const barCtx = document.getElementById('failedAttemptsChart').getContext('2d');
+            const ipLabels = logData.map(item => item.ip);
+            const attemptValues = logData.map(item => item.failed_attempts);
+            const barColors = logData.map(item => {
+                if (item.risk === 'HIGH') return 'rgba(255, 59, 92, 0.75)';
+                if (item.risk === 'MEDIUM') return 'rgba(255, 159, 28, 0.75)';
+                return 'rgba(0, 255, 65, 0.75)';
+            });
+            const barBorders = logData.map(item => {
+                if (item.risk === 'HIGH') return '#ff3b5c';
+                if (item.risk === 'MEDIUM') return '#ff9f1c';
+                return '#00ff41';
+            });
+
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ipLabels,
+                    datasets: [{
+                        label: 'Failed Attempts',
+                        data: attemptValues,
+                        backgroundColor: barColors,
+                        borderColor: barBorders,
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.06)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+
+        // Search and Filter IP Table
+        function filterLogsTable() {
+            const searchQuery = document.getElementById('ipSearchInput').value.toLowerCase().trim();
+            const selectedRisk = document.getElementById('riskFilterSelect').value;
+            const rows = document.querySelectorAll('#cyberLogTable tbody tr.log-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const ip = (row.getAttribute('data-ip') || '').toLowerCase();
+                const risk = (row.getAttribute('data-risk') || '').toUpperCase();
+                const attempts = (row.getAttribute('data-attempts') || '');
+
+                const matchesSearch = ip.includes(searchQuery) || risk.toLowerCase().includes(searchQuery) || attempts.includes(searchQuery);
+                const matchesRisk = (selectedRisk === 'ALL') || (risk === selectedRisk);
+
+                if (matchesSearch && matchesRisk) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const noMatchAlert = document.getElementById('noMatchAlert');
+            if (visibleCount === 0 && rows.length > 0) {
+                noMatchAlert.classList.remove('d-none');
+            } else {
+                noMatchAlert.classList.add('d-none');
+            }
+        }
+
+        // Download JSON Report
+        function downloadJSONReport() {
+            const reportPayload = {
+                project: "AI Security Log Analyzer",
+                generated_at: new Date().toISOString(),
+                summary: {
+                    total_ips: Number('{{ total_ips }}') || 0,
+                    high_risk: Number('{{ high_risk }}') || 0,
+                    medium_risk: Number('{{ medium_risk }}') || 0,
+                    low_risk: Number('{{ low_risk }}') || 0
+                },
+                data: getTableData()
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportPayload, null, 4));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "ai_security_log_report.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Inspect Action Modal
+        function inspectRecord(ip, attempts, risk) {
+            document.getElementById('modalIp').textContent = ip;
+            document.getElementById('modalAttempts').textContent = attempts;
+            const riskEl = document.getElementById('modalRisk');
+            riskEl.textContent = risk;
+            riskEl.style.color = risk === 'HIGH' ? 'var(--risk-high)' : (risk === 'MEDIUM' ? 'var(--risk-med)' : 'var(--risk-low)');
+
+            const modal = new bootstrap.Modal(document.getElementById('inspectModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

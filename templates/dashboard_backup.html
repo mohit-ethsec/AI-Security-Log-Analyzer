@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Security Log Analyzer - SOC Dashboard</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+        
+        :root {
+            --bg-base: #02050f;
+            --bg-panel: rgba(10, 15, 30, 0.8);
+            --neon-green: #00ff41;
+            --neon-green-glow: rgba(0, 255, 65, 0.4);
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --border-dim: #1e293b;
+            
+            --risk-high: #ff2a2a;
+            --risk-med: #ff9f1c;
+            --risk-low: #00ff41;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Share Tech Mono', monospace;
+            /* Cyber grid background */
+            background-image: 
+                linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center center;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Scanline Overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.1));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.3;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            background: linear-gradient(90deg, #04091a 0%, #0a132b 100%);
+            border-bottom: 1px solid var(--neon-green);
+            box-shadow: 0 0 15px var(--neon-green-glow);
+            backdrop-filter: blur(10px);
+        }
+        .navbar-brand {
+            color: var(--neon-green) !important;
+            font-weight: 700;
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px var(--neon-green-glow);
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Live Indicator */
+        .live-indicator {
+            height: 10px;
+            width: 10px;
+            background-color: var(--neon-green);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 15px;
+            box-shadow: 0 0 10px var(--neon-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--neon-green-glow); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 65, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes blink-cursor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Card Styling */
+        .dashboard-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(5px);
+            /* Initial state for animation */
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Animation Delays for Staggered Load */
+        .col-xl-3:nth-child(1) .dashboard-card { animation-delay: 0.1s; }
+        .col-xl-3:nth-child(2) .dashboard-card { animation-delay: 0.2s; }
+        .col-xl-3:nth-child(3) .dashboard-card { animation-delay: 0.3s; }
+        .col-xl-3:nth-child(4) .dashboard-card { animation-delay: 0.4s; }
+        .table-container { animation: fadeInUp 0.6s ease-out 0.5s forwards; opacity: 0; }
+
+        /* Card Hover Effects */
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-green);
+            box-shadow: 0 8px 25px rgba(0, 255, 65, 0.15);
+        }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+            background-color: var(--neon-green);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .dashboard-card:hover::before { opacity: 1; }
+
+        .card-title {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+        .card-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 2.5rem;
+            color: #fff;
+            margin-top: 15px;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Data Table Styling */
+        .table-container {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-dim);
+            border-radius: 4px;
+            padding: 2rem;
+            position: relative;
+            backdrop-filter: blur(5px);
+            border-top: 3px solid var(--neon-green);
+        }
+        
+        .terminal-header {
+            color: var(--neon-green);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2rem;
+            background-color: var(--neon-green);
+            vertical-align: middle;
+            margin-left: 5px;
+            animation: blink-cursor 1s step-end infinite;
+        }
+
+        .table {
+            color: var(--text-main);
+            margin-bottom: 0;
+            font-family: 'Fira Code', monospace;
+        }
+        .table thead th {
+            border-bottom: 1px solid var(--border-dim);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-bottom: 15px;
+        }
+        .table tbody td {
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            padding: 15px 10px;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table tbody tr:hover {
+            background-color: rgba(0, 255, 65, 0.05);
+        }
+        .table tbody tr:hover td {
+            color: var(--neon-green);
+        }
+
+        /* Risk Badges */
+        .badge { 
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem; 
+            padding: 0.5em 1em; 
+            letter-spacing: 1px;
+            border-radius: 2px;
+        }
+        .badge-high { 
+            background-color: rgba(255, 42, 42, 0.1); 
+            color: var(--risk-high); 
+            border: 1px solid var(--risk-high); 
+            box-shadow: 0 0 10px rgba(255, 42, 42, 0.2); 
+        }
+        .badge-medium { 
+            background-color: rgba(255, 159, 28, 0.1); 
+            color: var(--risk-med); 
+            border: 1px solid var(--risk-med); 
+            box-shadow: 0 0 10px rgba(255, 159, 28, 0.2); 
+        }
+        .badge-low { 
+            background-color: rgba(0, 255, 65, 0.1); 
+            color: var(--risk-low); 
+            border: 1px solid var(--risk-low); 
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2); 
+        }
+
+        /* Scrollbar styling for that complete app feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-dim);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg mb-4 py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#">
+                <span class="live-indicator"></span>
+                <i class="fa-solid fa-shield-halved me-3"></i>
+                AI Security Log Analyzer
+            </a>
+            <div class="d-flex align-items-center text-muted" style="font-size: 0.9rem;">
+                <i class="fa-solid fa-satellite-dish me-2"></i> SYSTEM_STATUS: <span class="text-success ms-2">ONLINE</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 pb-5">
+        <!-- Summary Cards Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="dashboard-card">
+                    <div class="card-title">
+                        <i class="fa-solid fa-network-wired me-2"></i>Total Suspicious IPs
+                    </div>
+                    <div class="card-value">{{ total_suspicious | default(0) }}</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="dashboard-card">
+                    <div class="card-title" style="color: var(--risk-high);">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>High Risk IPs
+                    </div>
+                    <div class="card-value">{{ high_risk_count | default(0) }}</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="dashboard-card">
+                    <div class="card-title" style="color: var(--risk-med);">
+                        <i class="fa-solid fa-radiation me-2"></i>Medium Risk IPs
+                    </div>
+                    <div class="card-value">{{ medium_risk_count | default(0) }}</div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="dashboard-card">
+                    <div class="card-title" style="color: var(--risk-low);">
+                        <i class="fa-solid fa-shield-check me-2"></i>Low Risk IPs
+                    </div>
+                    <div class="card-value">{{ low_risk_count | default(0) }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Row -->
+        <div class="row">
+            <div class="col-12">
+                <div class="table-container shadow-lg">
+                    <div class="terminal-header">
+                        <i class="fa-solid fa-terminal me-2"></i> root@soc-ai:~# ./analyze_threats.sh<span class="cursor"></span>
+                    </div>
+                    <div class="table-responsive mt-4">
+                        <table class="table table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Failed Attempts</th>
+                                    <th>Risk Level</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data %}
+                                <tr>
+                                    <td>{{ item.ip }}</td>
+                                    <td>{{ item.failed_attempts }}</td>
+                                    <td>
+                                        {% if item.risk_level == 'HIGH' %}
+                                            <span class="badge badge-high"><i class="fa-solid fa-skull me-1"></i> HIGH</span>
+                                        {% elif item.risk_level == 'MEDIUM' %}
+                                            <span class="badge badge-medium"><i class="fa-solid fa-exclamation me-1"></i> MEDIUM</span>
+                                        {% elif item.risk_level == 'LOW' %}
+                                            <span class="badge badge-low"><i class="fa-solid fa-check me-1"></i> LOW</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ item.risk_level }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" style="font-family: inherit; font-size: 0.8rem; border-color: var(--border-dim);">
+                                            <i class="fa-solid fa-magnifying-glass"></i> Inspect
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
